@@ -1,0 +1,23 @@
+# GitHub Actions build matrix.
+#
+# Ferris Sweep = the "cradio" shield in ZMK, on a nice!nano v2 per half.
+# (If you actually have a splitkb.com "Aurora Sweep", swap cradio_left/right
+#  for splitkb_aurora_sweep_left/right below.)
+---
+include:
+  - board: nice_nano_v2
+    shield: cradio_left
+  - board: nice_nano_v2
+    shield: cradio_right
+
+  # ── Optional: ZMK Studio-enabled left (central) build ──────────────────────
+  # Lets you live-tweak *key assignments* over USB at https://zmk.studio .
+  # Studio CANNOT create combos / hold-taps / mod-morphs / macros — those stay
+  # in cradio.keymap (edit them in the Nick Coutsos web editor instead).
+  # Note: Studio also needs a physical-layout for the shield; cradio may not
+  # define one, so treat this as experimental. Uncomment to try:
+  # - board: nice_nano_v2
+  #   shield: cradio_left
+  #   snippet: studio-rpc-usb-uart
+  #   cmake-args: -DCONFIG_ZMK_STUDIO=y
+  #   artifact-name: cradio_left_studio
