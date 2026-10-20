@@ -30,7 +30,14 @@ is unchanged; the keyboard just sends the same chords.
    *(Use the `kamilradziszewski` account — switch with `gh auth switch -u kamilradziszewski` / `ghsw` if needed.)*
 3. Open the repo’s **Actions** tab. Each push runs **“Build ZMK firmware”** and
    produces a `firmware` artifact containing **two** files:
-   `cradio_left-nice_nano_v2-zmk.uf2` and `cradio_right-nice_nano_v2-zmk.uf2`.
+   `cradio_left.uf2` and `cradio_right.uf2`.
+
+`config/west.yml` and `.github/workflows/build.yml` are pinned to the same ZMK
+`main` commit (`4dd95d7840eb3d5a3f59bb29fbf1ab054715ef85`) so the ZMK source
+and build workflow stay on the same Zephyr 4.1 snapshot. This is a development
+snapshot, not a stable release; update both pins together when choosing another
+ZMK version. The nice!nano v2 target is `nice_nano@2.0.0//zmk`; the in-tree
+`cradio` shield is unchanged.
 
 ## 2. Flash (drag-and-drop, no CLI)
 
@@ -47,9 +54,10 @@ Pair to macOS via **Bluetooth** (the **left** half is the central that talks to 
 ## 3. Edit with a GUI
 
 - **Primary — [Nick Coutsos keymap-editor](https://nickcoutsos.github.io/keymap-editor/)**
-  (web): authorize it against this `zmk-config` repo and it edits `config/cradio.keymap`
-  visually — **including** combos, hold-taps, mod-morphs, and macros — committing
-  straight back to GitHub (which re-triggers the build). This is the recommended tool.
+  (web): authorize it against this `zmk-config` repo to edit ordinary key
+  assignments and inspect the layers. This keymap also contains custom
+  positional hold-taps and release-aware macros; review editor changes carefully
+  to ensure those behavior definitions are preserved.
 - **Optional — [ZMK Studio](https://zmk.studio)**: live key-swaps over USB, but it
   **only reassigns existing behaviors** — it can’t create combos / hold-taps /
   mod-morphs / macros. Enable it via the commented block in `build.yaml`.
@@ -60,13 +68,12 @@ Pair to macOS via **Bluetooth** (the **left** half is the central that talks to 
 
 | # | Layer | Activation | What it does |
 |---|-------|-----------|--------------|
-| 0 | Base | always | Colemak-DH. Top-row mod-taps (⌃⌘⌥⇧ mirrored). Thumbs: LO=⌫/NumSym, LI=Space/⌘, RI=⏎/⇧, RO=Tab/Nav. Holds: A→Arrows, V→Func, M→Apps, ;→Digits. **H+J = Esc**. `,`→⇧`'`, `.`→⇧`"`. |
-| 1 | NumSym | hold LO (⌫) | Digits 1–0 (mirrored mod-taps), `[ ]` `( )`(⇧`< >`), `` ` `` , `;`, `= -`(⇧`_ +`), `\`. |
-| 2 | Nav | hold RO (Tab) | Left = Raycast window mgmt (meh/hyper combos). Right = vim arrows + Home/End/PgUp/PgDn + browser history/tab nav. |
-| 3 | Func | hold V | F1–F12 (mirrored mod-taps), display + ext-display brightness, play/pause, volume. |
-| 4 | Arrows | hold A | H J K L = ←↓↑→; browser history/tab nav + Esc on the left. |
-| 5 | Apps | hold M | Every alpha = `meh`+letter → Raycast app launch. Thumbs: Leader (⌃F5), Raycast (⌃F6), ⌘. |
-| 6 | Digits | hold ; | Number row over the home block. |
+| 0 | Base | always | Colemak-DH with bilateral opposite-hand home-row mods. Thumbs: LO=Backspace, LI=Space/Nav, RI=Enter/NumSym, RO=Tab/Forward Delete. Base-only modifier combos; **G+H = Esc**. `,`→⇧`'`, `.`→⇧`"`. |
+| 1 | NumSym | hold RI from Base | Digits 1–0, coding symbols, and shifted punctuation forks. |
+| 2 | Navigation | hold LI from Base | Window placement, browser history/tab shortcuts, arrows, display/media controls, Caps Word. Q enters FKeys. |
+| 3 | Apps | hold physical M from Base | One-shot (3 s) layer: each letter sends `meh`+its Colemak-DH output. Thumbs: Leader (⌃F5), Raycast (⌃F6), ⌘. |
+| 4 | FKeys | Q from Navigation | F1–F12 with modifier keys; an F-key returns to Base on release; the layer expires after 3 s idle. |
+| 5 | Forward Delete | hold RO, then tap LI | Sends Forward Delete; all other keys pass through. |
 
 Full per-key grids are in [`config/cradio.keymap`](config/cradio.keymap).
 
@@ -74,37 +81,35 @@ Full per-key grids are in [`config/cradio.keymap`](config/cradio.keymap).
 
 ## Known differences from the kanata config
 
-These are deliberate adaptations where ZMK and kanata don’t map 1:1. Tune in the
-web editor.
+These are deliberate adaptations where ZMK and kanata don’t map 1:1. Test the
+timing on the keyboard before relying on the new firmware.
 
-- **Hold-tap feel.** kanata `tap-hold` → ZMK `tap-preferred` (`&ht`); kanata
-  `tap-hold-release` → ZMK `balanced` (`&lb`). Timings start at
-  `tapping-term-ms = 200`, `quick-tap-ms = 175`, `require-prior-idle-ms = 150`.
-  Top-row mods are sensitive during fast typing — raise `require-prior-idle-ms`
-  if you get accidental modifiers. The **alpha layer-holds** (A→Arrows, V→Func,
-  M→Apps, ;→Digits) use the `&lb` balanced flavor, so typing a word with a quick
-  key right after `a`/`d`/`h`/`o` can occasionally trigger the layer. If that
-  bothers you, give those four keys a *separate* hold-tap with
-  `require-prior-idle-ms` and/or `hold-trigger-key-positions` (positional
-  hold-tap) — but keep the **thumb** `&lb` without prior-idle so thumb layers
-  still fire mid-burst.
-- **Apps / Digits are momentary, not one-shot.** kanata used a 3 s one-shot
-  layer; ZMK sticky-layers only last for the *next single key*, which breaks
-  multi-digit entry. So these are plain **hold-while-typing** layers (hold M or
-  `;` while pressing the target key). If you prefer tap-to-activate for Apps,
-  swap `&lb APPS H` for a `&sl`-based behavior in the keymap.
+- **Home-row mods.** ZMK uses balanced positional hold-taps with
+  `hold-trigger-key-positions`, `hold-trigger-on-release`,
+  `tapping-term-ms = 300`, and `require-prior-idle-ms = 150` to approximate
+  Kanata’s opposite-hand-release behavior. Kanata’s `neutral-keys` rules have no
+  exact ZMK equivalent, so mod rolls and same-hand typing need testing.
+- **Thumb timing.** Kanata separates a 150 ms tap term from a 200 ms hold term.
+  ZMK hold-taps use one term; the thumbs use 200 ms to preserve the hold timing.
+- **One-shot layers and shift.** Apps uses ZMK's `&sl` sticky layer with a 3 s
+  timeout; the A/semicolon shift holds use sticky Shift with a 500 ms timeout
+  and quick-release.
+- **FKeys idle timeout.** FKeys uses a 3 s sticky-layer timeout, re-armed by
+  modifier and otherwise-unused key presses. Each F-key macro holds the key
+  until physical release, then switches to Base. This approximates Kanata’s
+  physical-idle timer; a modifier held for more than 3 s may still let the ZMK
+  timeout expire.
+- **Modifier combos.** The ten Base-only modifier pairs use ZMK combos with
+  `slow-release`, so the modifiers remain held until both combo keys are
+  released. Their 25 ms window matches Kanata’s configured chord timeout.
 - **`next app window`** is mapped to **`Cmd+\``** (`LG(GRAVE)`), the real macOS
   shortcut. kanata sent `M-nubs`; if your setup expects the ISO key, change it to
   `LG(NON_US_BSLH)`.
-- **`` ` `` on NumSym phys-L** is `GRAVE` (the documented intent). kanata sent
-  `nubs`; switch to `&kp NON_US_BSLH` if you really want the ISO key.
-- **Keyboard backlight keys dropped.** kanata’s `bldn`/`blup` (MacBook internal
-  keyboard backlight) have **no external-HID equivalent** — those two Func-layer
-  keys are `&none`. (Display brightness *does* work via `C_BRI_DN/UP`.)
-- **Right-hand mods use R-variants** (`RSHFT`/`RCTRL`/…) per ZMK convention;
-  functionally identical to the left-hand mods on macOS.
-- **Arrows layer** keeps kanata’s `phys P = ⌃`, `phys E/I = ⌥` workaround. The
-  Sweep matrix has no conflict, so you can simplify these if you like.
+- **Keyboard backlight keys dropped.** Kanata’s `bldn`/`blup` (MacBook internal
+  keyboard backlight) have no external-HID equivalent; those Navigation-layer
+  positions are blocked. Display brightness still uses `C_BRI_DN/UP`.
+- **Right-hand modifiers** use ZMK’s `RSHFT`/`RCTRL`/`RALT`/`RGUI` variants,
+  matching the Kanata profile.
 - **Thumb order.** Bindings assume key-positions `30 31 32 33` =
   left-outer, left-inner, right-inner, right-outer (LO/LI/RI/RO). If a hand’s two
   thumb keys feel swapped, swap those two bindings in each layer (30↔31 and/or
