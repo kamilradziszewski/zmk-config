@@ -108,10 +108,10 @@
 
         numsym_space_tap: numsym_space_tap {
             compatible = "zmk,behavior-hold-tap";
-            #binding-cells = <0>;
+            #binding-cells = <2>;
             flavor = "tap-preferred";
             tapping-term-ms = <200>;
-            bindings = <&none>, <&kp SPACE>;
+            bindings = <&none>, <&kp>;
         };
 
         modifier_chord: modifier_chord {
@@ -321,7 +321,7 @@
 //  phys Z    X          C           V                         B    N              M                    ,          .       /
     &none   &kp BSLH   &kp GRAVE   &mm_semicolon_colon &none &mm_plus_equals &mm_minus_underscore &mm_comma &mm_dot &kp FSLH
 //  thumbs· LO       LI                  RI    RO
-             &kp BSPC &numsym_space_tap &none &none
+             &kp BSPC &numsym_space_tap 0 SPACE &none &none
             >;
         };
 
