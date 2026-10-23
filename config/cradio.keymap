@@ -77,6 +77,7 @@
         sticky_shift: sticky_shift {
             compatible = "zmk,behavior-sticky-key";
             #binding-cells = <1>;
+            bindings = <&kp>;
             release-after-ms = <500>;
             quick-release;
         };
